@@ -1,4 +1,3 @@
-import concurrent.futures
 import logging
 from threading import Thread
 import time
@@ -18,29 +17,32 @@ class BusStop:
 
 
 class Bus:
-    positions = ["arriving", "stop", "departed"]  # enum
+    positions = ["arriving", "stop", "departed", "based"]
     position: str
     full: bool
     passengers: int
     ticket_inspector: bool
 
     def __init__(self):
-        self.position = self.positions[0]
+        self.position = self.positions[3]
         self.full = False
         self.passengers = 0
         self._lock = threading.Lock()
         self.ticket_inspector = False
 
     def drive(self, active_bus_stop: BusStop):
+
         print("Bus arriving")
-        sleep(5)
+        self.position = self.positions[0]
+        sleep(10)
         if active_bus_stop.passengers_number != 0 and not self.full:
             self.position = self.positions[1]
-            if random.random() > 0.1:
+            if random.random() < 0.1:
                 print("Ticket inspector is coming!")
                 self.ticket_inspector = True
             while active_bus_stop.passengers_number > 0:
                 print("Waiting for all passengers boarded")
+                sleep(10)
 
         print("Bus departing...")
         self.position = self.positions[2]
@@ -55,7 +57,7 @@ class Passenger:
 
     def __init__(self):
         self.on_bus_stop = False
-        self.bus_ticket = True
+        self.bus_ticket = False
         self.inside = False
         self.first = 0
         self._lock = threading.Lock()
@@ -68,7 +70,13 @@ class Passenger:
             logging.info("Passenger arrived bus stop")
 
         if random.random() > 0.05:
-            self.bus_ticket = False
+            with self._lock:
+                self.bus_ticket = True
+
+        while active_bus.ticket_inspector and not self.bus_ticket:
+            if self.first == 0:
+                print("Oops! Ticket inspector caught passenger red-handed... 280 pln 😎😩")
+                self.first = 1
 
         while not self.inside:
             if active_bus.position == active_bus.positions[0] and self.on_bus_stop:
@@ -77,7 +85,9 @@ class Passenger:
                     print("Passenger can board the bus")
                     self.first = 1
                 while not active_bus.position == active_bus.positions[1]:
-                    print("Waiting for the bus to stop")
+                    if self.first == 0:
+                        print("Waiting for the bus to stop")
+                        self.first = 1
                 print("Passenger boarding bus")
                 if active_bus.passengers < 50:
                     with self._lock:
@@ -88,6 +98,7 @@ class Passenger:
                         print("Passenger boarded")
                 else:
                     print("Keep waiting")
+                    active_bus_stop.passengers_number -= 1
 
 
 if __name__ == '__main__':
