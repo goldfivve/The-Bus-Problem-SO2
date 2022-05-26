@@ -33,13 +33,15 @@ class SlideShow:
 
     def draw(self):
         while True:
-            self.WINDOW.blit(self.current_image, (0, 0))
+            if bus.position == "departed":
+                self.change_picture("driving")
+            else:
+                self.WINDOW.blit(self.current_image, (0, 0))
             pygame.display.update()
             time.sleep(0.01)
 
     def give_honey(self):
         bus_stop = BusStop()
-        bus = Bus()
         bus_thread = Thread(target=bus.drive, args=(bus_stop, slide_show))
 
         passengers = list()
@@ -88,7 +90,9 @@ class Bus:
 
     def drive(self, active_bus_stop: BusStop, slide: SlideShow):
         print(f"Bus line {self.line} arriving")
-        slide.change_picture("driving")
+        with self._lock:
+            slide.change_picture("driving")
+            sleep(5)
         self.position = self.positions[0]
         if self.ticket_inspector > 0.1:
             with self._lock:
@@ -100,13 +104,12 @@ class Bus:
             self.position = self.positions[1]
             while active_bus_stop.passengers_number > 0:
                 print("Waiting for all passengers boarded")
-                with self._lock:
-                    slide.change_picture("boarding")
-                    sleep(2)
 
         print(f"passenger number: {self.passengers}")
         print("Bus departing...")
         with self._lock:
+            slide.change_picture("boarding")
+            sleep(5)
             slide.change_picture("driver")
             sleep(2)
         self.position = self.positions[2]
@@ -134,14 +137,13 @@ class Passenger:
         sleep(3)
         if not self.on_bus_stop:
             print(f"Passenger arriving bus stop for line {self.line}")
-            sleep(2)
             self.on_bus_stop = True
             print("Passenger arrived bus stop")
             with self._lock:
                 slide.change_picture("stop")
-                sleep(5)
+                sleep(2)
 
-        if self.cheat < 0.05:
+        if self.cheat > 0.1:
             with self._lock:
                 self.bus_ticket = True
 
@@ -153,7 +155,7 @@ class Passenger:
                 with self._lock:
                     slide.change_picture("no_ticket")
                     print("Oops! Ticket inspector caught passenger red-handed... 280 pln 😎😩")
-                    sleep(5)
+                    sleep(2)
                 self.first = False
 
         while not self.inside:
@@ -161,6 +163,7 @@ class Passenger:
                 active_bus_stop.passengers_number += 1
                 if not self.first:
                     print("Passenger can board the bus")
+
                 while not active_bus.position == active_bus.positions[1]:
                     if not self.first:
                         print("Waiting for the bus to stop")
@@ -173,12 +176,14 @@ class Passenger:
                         self.inside = True
                         self.on_bus_stop = False
                         print("Passenger boarded")
+
                 else:
                     print("Keep waiting")
                     active_bus_stop.passengers_number -= 1
 
 
 slide_show = SlideShow()
+bus = Bus()
 
 if __name__ == '__main__':
     pygame.mixer.init()
