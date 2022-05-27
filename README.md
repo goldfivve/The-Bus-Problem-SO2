@@ -20,8 +20,7 @@ Conditional variables will be used to:
 - to tell the next person to buy a ticket,
 - notify that the next person can proceed to ticket control.
 
-## Where can deadlocks and jams occur in case of bad 
-implementation?
+## Where can deadlocks and jams occur in case of bad implementation?
 - It may be that no one ever gets on the bus.
 - It may turn out that the bus never arrives.
 - It may turn out that no one ever buys a ticket.
